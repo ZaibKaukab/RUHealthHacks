@@ -42,7 +42,7 @@ Policy + optimization engine ─ shift eligibility, rest constraints,
 Step Functions ────────────── supervisor approval → physician
         │                      confirmation → outcome check
         ▼
-Next.js Command Center ────── live predictions, assessments,
+React + Vite Command Center ─ live predictions, assessments,
                                approvals, audit history
 
 Storage: DynamoDB (events, state) · S3 (replay, history) · CloudWatch (logs, tracing)
@@ -62,7 +62,7 @@ Storage: DynamoDB (events, state) · S3 (replay, history) · CloudWatch (logs, t
 | Jev AI | Scores operational risk and urgency; reviews conflicting signals; returns typed decisions with confidence |
 | Policy engine | Applies eligibility and rest rules; ranks candidates with a pass/fail reason for each rule |
 | Step Functions | Runs the approval workflow and confirms the intervention worked |
-| Next.js dashboard | Live view over WebSockets: gaps, ranked candidates, approvals, audit trail |
+| React + Vite dashboard | Authenticated operational UI; polls the API every 3–5 seconds for the MVP |
 | DynamoDB / S3 / CloudWatch | State and events / replay and history / logs and tracing |
 
 ## Example flow
@@ -79,7 +79,8 @@ Judges inject new events mid-demo (surges, status changes, duplicate or late eve
 
 ## Tech stack
 
-- **Frontend:** Next.js, WebSockets
+- **Frontend:** React, TypeScript, Vite, Mantine, TanStack Query, React Router
+- **Live updates:** 3–5 second API polling for the MVP; consider SSE for one-way push updates later
 - **Ingest:** Amazon API Gateway, AWS Lambda
 - **Messaging:** Amazon EventBridge, Amazon SQS
 - **Compute:** AWS Lambda, Amazon ECS

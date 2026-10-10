@@ -550,19 +550,20 @@ Add seeded scenario replay, before/after metrics, and the optional advisory inte
 
 ## 16. Recommended Frontend Stack
 
-| Layer                | Technology                           |
-| -------------------- | ------------------------------------ |
-| Application          | React + TypeScript + Vite            |
-| Styling              | Tailwind CSS                         |
-| UI components        | shadcn/ui                            |
-| Data fetching        | TanStack Query                       |
-| Local UI state       | Zustand                              |
-| Visualization        | Recharts                             |
-| Forms and validation | React Hook Form + Zod                |
-| Routing              | React Router                         |
-| API typing           | Generated types from FastAPI OpenAPI |
+| Layer                | Recommended tool                              |
+| -------------------- | --------------------------------------------- |
+| Application          | React + TypeScript + Vite                     |
+| UI components        | Mantine                                        |
+| Data fetching        | TanStack Query                                 |
+| Visualization        | Recharts                                       |
+| Forms and validation | React Hook Form + Zod                          |
+| Routing              | React Router                                   |
+| API typing           | Generated types from FastAPI OpenAPI           |
+| Frontend tests       | Vitest + React Testing Library; Playwright smoke tests |
 
-A Vite single-page application is appropriate because the product is an authenticated operational dashboard, not an SEO-driven website.
+A Vite single-page application is appropriate because the product is an authenticated operational dashboard, not an SEO-driven website. It builds static assets for S3 and CloudFront and does not need a Node.js rendering server. Mantine is the default UI library to accelerate accessible tables, forms, dialogs, and notifications; use its styling system rather than adding Tailwind and a second component library. TanStack Query owns remote API data and refresh behavior, while React component state and URL search parameters handle transient UI and filters. Add a global client-state library only if a concrete cross-screen need appears.
+
+For the MVP, refresh operational data every 3–5 seconds with TanStack Query. If push updates are needed later, prefer Server-Sent Events (SSE) for one-way backend-to-dashboard notifications; use WebSockets only if the product needs persistent two-way, low-latency communication.
 
 ## 17. Main Screens
 
