@@ -1,109 +1,126 @@
 # Sevaro Command Center
 
-**Every consult seen, every delay caught.**
-Built for the Sevaro track at Rutgers Health Hack 2026.
+**Detect coverage risk, decide on an intervention, and act on it, before a stroke consult waits.**
+
+Built for Sevaro's Challenge 2 (Tele-Neurology Operations Command Center) at Rutgers Health Hack 2026.
 
 ## The problem
 
-Sevaro's tele-neurologists cover stroke consults for many hospitals. Sevaro can already *see* its live workload. The gap is what happens next: when a surge of consults hits right as shifts end, someone has to notice the risk, choose a fix, and act on it in time. Today that depends on a person happening to notice.
+Sevaro's tele-neurologists cover consults for many hospitals at once. Demand is uneven: one hospital can send several stroke consults in half an hour, sometimes right as physicians reach the end of their shift. Sevaro already has a live view of physician workload. What's missing is what happens next: noticing the risk early, working out who is credentialed and eligible to help, and getting that person online with approval.
 
 ## What it does
 
-The Command Center turns workload data into action in three layers:
+Three connected layers:
 
-1. **Detect.** Predicts coverage gaps 60–90 minutes ahead by comparing incoming consult demand against which physicians are truly available.
-2. **Decide.** Ranks off-shift physicians who could take a split shift and explains exactly why each one passed or failed eligibility.
-3. **Act.** Routes the recommendation through supervisor approval and physician confirmation, then verifies that the gap actually closed.
+1. **Detect.** Rebuilds live state from the event stream and flags what needs attention now and in the next 90 minutes: consults breaching stage time standards, hospitals above their demand baseline, credentialed capacity dropping below the minimum when shifts end, and physician signals that contradict each other.
+2. **Decide.** Recommends an intervention for the top issue. For a split shift, it checks every off-shift physician against each eligibility rule and shows which rules each one passed or failed.
+3. **Act.** Runs the offer loop: propose, clinical lead approves, offer sent (simulated), physician accepts, declines or times out, projected coverage updates. Offers stop once the gap is filled.
 
-Availability signals often disagree. A physician's status may say "available" while they're on a video call and their heartbeat stopped 10 minutes ago. The system reconciles these signals instead of trusting any single one.
+**Design principle:** eligibility first, ranking second, explanation third, human approval before any action.
 
-## Architecture
+## How the backend works
 
 ```
-Hospital data sources
-(consults, schedules, video/calls, heartbeats, status updates)
+event_stream.csv + reference CSVs
         │
         ▼
-API Gateway + Lambda ──────── auth, validation, event normalization
+1. Load        parse CSVs, normalize timestamps
         │
         ▼
-EventBridge + SQS ─────────── routing, queuing, retries, dead-letter queue
+2. Replay      dedupe by event_id, order by event_time (not arrival),
+        │      build physician state and consult state separately
+        ▼
+3. Eligibility credentialing + real availability (reconciled signals)
         │
         ▼
-Detection layer (Lambda/ECS) ─ signal reconciliation, physician state,
-        │                      deduplication, coverage forecasting
+4. Gaps        15-minute slots over 90 minutes: required vs available,
+        │      shift ends, demand-spike adjustment
         ▼
-Jev AI ────────────────────── risk scoring, urgency, conflicting-signal
-        │                      review, human-review routing
+5. Rank        split-shift candidates with pass/fail per rule,
+        │      plus a guard against the split-shift trap
         ▼
-Policy + optimization engine ─ shift eligibility, rest constraints,
-        │                      candidate ranking, safety checks
-        ▼
-Step Functions ────────────── supervisor approval → physician
-        │                      confirmation → outcome check
-        ▼
-Next.js Command Center ────── live predictions, assessments,
-                               approvals, audit history
-
-Storage: DynamoDB (events, state) · S3 (replay, history) · CloudWatch (logs, tracing)
+6. API         FastAPI endpoints for the dashboard + live event injection
 ```
 
-### Key design principle
+### Availability reconciliation
 
-**AI advises; rules decide.** Jev AI scores risk and flags conflicting signals, but the deterministic policy engine has the final say on who is eligible. Every eligibility decision can be traced to a specific rule, such as licensure, credentialing, or rest hours, never to a model's guess.
+Physicians don't report being on a call. Activity is derived from signals that can disagree:
 
-## Components
-
-| Component | Responsibility |
+| Signal combination | Interpretation |
 |---|---|
-| API Gateway + Lambda | Receives events, authenticates, validates, normalizes to one schema |
-| EventBridge + SQS | Routes events to consumers; retries failures; dead-letter queue for bad events |
-| Detection layer | Deduplicates and reorders late events, reconciles availability signals, tracks physician state, forecasts demand |
-| Jev AI | Scores operational risk and urgency; reviews conflicting signals; returns typed decisions with confidence |
-| Policy engine | Applies eligibility and rest rules; ranks candidates with a pass/fail reason for each rule |
-| Step Functions | Runs the approval workflow and confirms the intervention worked |
-| Next.js dashboard | Live view over WebSockets: gaps, ranked candidates, approvals, audit trail |
-| DynamoDB / S3 / CloudWatch | State and events / replay and history / logs and tracing |
+| On a Synapse call or video session | Busy |
+| Camera active, no Synapse session, status not In Meeting | Busy (likely external video). Flagged. |
+| Camera active, status In Meeting | Available (interruptible) |
+| Desktop agent offline | Assumed available but **unverified**. Risk surfaced. |
 
-## Example flow
+Events can arrive late, and at least one appears twice. State is built from `event_time`, never from arrival order.
 
-1. At 6:30 PM, consult volume is rising and three physicians' shifts end at 7:00 PM.
-2. The forecast predicts 9 consults between 7:00 and 8:30 PM against 5 available physicians.
-3. The gap detector flags a coverage risk 90 minutes ahead.
-4. The policy engine ranks off-shift physicians: Dr. A passes every rule; Dr. B fails the rest-hours rule; Dr. C isn't credentialed at two of the affected hospitals.
-5. The supervisor approves Dr. A, Dr. A confirms, and the system checks that the gap closed.
+### Split-shift eligibility
 
-## Live demo test
+An off-shift physician can receive an offer only if all of these hold:
 
-Judges inject new events mid-demo (surges, status changes, duplicate or late events). The system updates live without a restart, and the dashboard shows the recalculated gap and ranking.
+- Opted in to split-shift offers
+- Credentialed at one or more of the hospitals with the gap
+- At least 10 hours since their last shift ended, measured at the offered start time
+- Hours worked in the trailing 7 days plus offered hours ≤ 60
+- No overlap with a shift they're already scheduled for
+- Offer is at least 2 hours long (time to come online counts against it)
+
+Safety constraints: no patient information in notifications, clinical lead approval before every offer, one open offer per physician, at most 3 offers per physician per week, offers expire after 10 minutes, and a full log of who was considered, excluded, approved, and the outcome.
+
+### The split-shift trap
+
+Routing sends calls to the eligible physician with the fewest consults this shift. A physician joining mid-shift starts at zero, so they would receive nearly every call at every hospital they're credentialed for. That just moves the imbalance instead of fixing it. The command center accounts for this, for example by seeding a starting consult count or limiting the new physician to the gap hospitals.
+
+## Demo checklist (from the challenge brief)
+
+- [ ] Rebuild state from the event stream, handling late and duplicate events, and match the 18:20 reference snapshot
+- [ ] Show physician activity and consult lifecycle independently, with time in stage vs. standards
+- [ ] Detect and rank what needs attention, with a reason for each flag
+- [ ] Project coverage at least 90 minutes ahead, accounting for shift ends and demand baseline
+- [ ] Recommend an intervention; for a split shift, show every off-shift physician and each rule's pass/fail
+- [ ] Run the full loop: propose, approve, send (simulated), accept/decline, update projected coverage
+- [ ] Show how we handle the split-shift trap
+- [ ] Live test: accept judge-injected events in the same format without a restart
+
+## Data
+
+Synthetic dataset covering Tuesday 17 March 2026, 07:00–18:20 ET. "Now" is 18:20:00 ET.
+
+| File | Contents |
+|---|---|
+| `event_stream.csv` | ~1,160 events, the source of truth (sorted by `ingested_at`) |
+| `hospitals.csv` | 12 hospitals, time zone, coverage tier |
+| `physicians_on_shift.csv` | 8 on-shift physicians with shift times |
+| `physicians_off_shift_roster.csv` | 6 off-shift physicians: opt-in, last/next shift, hours worked, time to come online |
+| `credentialing_matrix.csv` | Which physicians may take consults from which hospitals |
+| `baseline_hourly_volume.csv` | 12-week weekday mean and p90 consults per hospital per hour |
+| `coverage_requirements.csv` | Minimum available credentialed physicians per hospital per time block |
+| `snapshot_*_1820.csv` | Reference state at 18:20; our replay must reproduce it |
+
+All data is synthetic. No patient information is used or required.
 
 ## Tech stack
 
-- **Frontend:** Next.js, WebSockets
-- **Ingest:** Amazon API Gateway, AWS Lambda
-- **Messaging:** Amazon EventBridge, Amazon SQS
-- **Compute:** AWS Lambda, Amazon ECS
-- **AI:** Jev AI
-- **Workflow:** AWS Step Functions
-- **Storage and observability:** Amazon DynamoDB, Amazon S3, Amazon CloudWatch
+- **Backend:** Python 3.12, FastAPI, Pytest
+- **State:** in memory, rebuilt by replaying the event stream; new events are applied live through the API
+- **Frontend:** TBD
 
 ## Getting started
 
-> TODO: fill in once the repo structure is set.
+> TODO: fill in once the backend code lands.
 
 ```bash
 git clone <repo-url>
-cd <repo>
-# install dependencies
-# configure AWS credentials and environment variables
-# deploy infrastructure
-# run the dashboard locally
+cd RUHealthHacks
+pip install -r requirements.txt
+uvicorn app.main:app --reload
 ```
 
 ## Team
 
 | Name | Role |
 |---|---|
-| | Backend |
+| Ibrahim | Backend |
 | | |
 | | |
