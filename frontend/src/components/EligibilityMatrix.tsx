@@ -73,12 +73,12 @@ export function EligibilityMatrix({ recommendation, physicians }: Props) {
         style={{
           padding: 14,
           borderRadius: 10,
-          background: "var(--caution-soft)",
-          border: "1px solid rgba(196,122,26,0.25)",
+          background: "var(--warn-soft)",
+          border: "1px solid rgba(212,160,23,0.35)",
         }}
       >
         <strong>Split-shift trap</strong>
-        <p style={{ margin: "6px 0 0", color: "var(--ink-muted)", fontSize: 14 }}>
+        <p style={{ margin: "6px 0 0", color: "var(--text-soft)", fontSize: 14 }}>
           A physician joining mid-shift at zero consults would absorb nearly every
           call. We seed workload and limit offers to gap hospitals so the imbalance
           is fixed, not moved.
@@ -98,7 +98,7 @@ export function EligibilityMatrix({ recommendation, physicians }: Props) {
               <div style={{ fontWeight: 600 }}>
                 {physicianName(row.physician_id, physicians)}
               </div>
-              <div style={{ fontSize: 13, color: "var(--ink-muted)" }}>
+              <div style={{ fontSize: 13, color: "var(--text-soft)" }}>
                 {row.kind === "recommended"
                   ? "Recommended"
                   : row.kind === "alternative"
