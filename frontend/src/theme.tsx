@@ -19,44 +19,29 @@ type ThemeCtx = {
 const Ctx = createContext<ThemeCtx | null>(null);
 const KEY = "relay-theme";
 
-function readStored(): Theme {
-  try {
-    const v = localStorage.getItem(KEY);
-    if (v === "dark" || v === "light") return v;
-  } catch {
-    /* ignore */
-  }
-  return "dark";
-}
-
 function apply(theme: Theme) {
   document.documentElement.setAttribute("data-theme", theme);
 }
 
+/** Dark-only product surface — light mode removed. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof document !== "undefined") {
-      const t = readStored();
-      apply(t);
-      return t;
-    }
-    return "dark";
-  });
+  const [theme] = useState<Theme>("dark");
 
   useEffect(() => {
-    apply(theme);
+    apply("dark");
     try {
-      localStorage.setItem(KEY, theme);
+      localStorage.setItem(KEY, "dark");
     } catch {
       /* ignore */
     }
-  }, [theme]);
+  }, []);
 
-  const setTheme = useCallback((t: Theme) => setThemeState(t), []);
-  const toggle = useCallback(
-    () => setThemeState((t) => (t === "light" ? "dark" : "light")),
-    [],
-  );
+  const setTheme = useCallback((_t: Theme) => {
+    apply("dark");
+  }, []);
+  const toggle = useCallback(() => {
+    apply("dark");
+  }, []);
 
   const value = useMemo(
     () => ({ theme, toggle, setTheme }),

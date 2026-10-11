@@ -10,20 +10,22 @@ export const brand = {
   disclaimer:
     "Synthetic demo data. No patient information. Human approval before every offer.",
   heroVideo: "/hero/relay-hero.mp4",
-  ctaPrimary: "Open the coverage desk",
+  ctaPrimary: "Enter desk",
   getStarted: "Get started",
   deskLabel: "Coverage desk",
   labLabel: "Scenario lab",
   capabilityHeadline: "Built for the moment coverage fails",
   capabilityLede:
     "Relay surfaces the gap, explains who can fill it, and waits for your approval before anything is sent.",
-  missionHeadline: "Neurology · AI · Patient impact",
+  missionHeadline: "Built for tele-neurology",
   missionBody:
-    "Built with Sevaro's tele-neurology reality in mind: credentialed coverage risk, explainable eligibility, and human approval, so stroke-priority consults do not wait on a silent gap.",
-  collabHeader: "In collaboration with",
+    "Stroke-priority consults cannot wait on a silent coverage gap. Relay watches credentialed capacity, explains who can fill the shortfall, and keeps a human in the loop before every offer.",
+  missionTags: ["Neurology", "AI ops", "Patient impact"] as const,
   partnersHeader: "Event partners",
   faqTitle: "Frequently asked questions",
   faqTouch: "Eligibility first. Human approval before every offer.",
+  reachOutEmail: "relay@rutgershealthhack.dev",
+  reachOutLabel: "Reach out",
 } as const;
 
 export const FAQ = [
@@ -41,7 +43,11 @@ export const FAQ = [
   },
 ] as const;
 
+/** Order: Rutgers Health, Sevaro, AWS, Microsoft, Cigna */
 export const PARTNER_LOGOS = [
-  { src: "/brand/sevaro.svg", alt: "Sevaro" },
   { src: "/brand/rutgers-health-hack-dark.svg", alt: "Rutgers Health Hack" },
+  { src: "/brand/sevaro.svg", alt: "Sevaro" },
+  { src: "/brand/partners/aws.png", alt: "AWS" },
+  { src: "/brand/partners/microsoft.png", alt: "Microsoft" },
+  { src: "/brand/partners/cigna.png", alt: "The Cigna Group" },
 ] as const;

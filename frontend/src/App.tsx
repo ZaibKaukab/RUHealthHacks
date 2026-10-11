@@ -5,7 +5,7 @@ import Lab from "./pages/Lab";
 import { RelayMark } from "./components/RelayMark";
 import { IconBolt, IconDesk } from "./components/Icons";
 import { useDemo } from "./demo/store";
-import { clock } from "./lib/format";
+import { clock, clockDate } from "./lib/format";
 import { brand } from "./brand";
 
 function AppShell({ children }: { children: React.ReactNode }) {
@@ -13,10 +13,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const isLab = location.pathname.includes("/lab");
-  const label =
-    (dashboard as { label?: string }).label ??
-    dashboard.dataset_id ??
-    "Synthetic demo";
 
   return (
     <div className="app-shell">
@@ -26,10 +22,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="app-aside">
         <div className="app-aside-top">
           <RelayMark size="nav" href="/" />
-        </div>
-        <div className="app-workspace">
-          <strong>Harbor network</strong>
-          Live ops · synthetic demo
+          <div className="app-workspace">
+            <strong>Harbor network</strong>
+            <span>Live ops · synthetic demo</span>
+          </div>
         </div>
         <nav className="app-nav" aria-label="Primary">
           <NavLink to="/app" end>
@@ -42,13 +38,23 @@ function AppShell({ children }: { children: React.ReactNode }) {
           </NavLink>
         </nav>
         <div className="app-aside-foot">
-          <div className="tabular">Now {clock(dashboard.as_of)} ET</div>
-          <div>{label}</div>
+          <div className="aside-now">
+            <span className="aside-now-label">Now</span>
+            <span className="aside-now-time tabular">{clock(dashboard.as_of)} ET</span>
+          </div>
+          <div className="aside-date tabular">{clockDate(dashboard.as_of)}</div>
         </div>
       </aside>
       <div className="app-main">
         <header className="app-topbar">
-          <h1>{isLab ? brand.labLabel : brand.deskLabel}</h1>
+          <div className="app-topbar-title">
+            <h1>{isLab ? brand.labLabel : brand.deskLabel}</h1>
+            <p className="app-topbar-sub">
+              {isLab
+                ? "Inject edge cases · audit trail · safety constraints"
+                : "Stroke-priority coverage · Synapse · human approval"}
+            </p>
+          </div>
           <div className="app-topbar-actions">
             {!isLab ? (
               <button
@@ -64,7 +70,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             ) : null}
           </div>
         </header>
-        <main id="main" className="page-enter">
+        <main id="main" className="page-enter route-fade" key={location.pathname}>
           {children}
         </main>
       </div>

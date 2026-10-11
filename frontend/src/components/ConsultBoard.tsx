@@ -42,6 +42,7 @@ export function ConsultBoard({ consultations, hospitals, asOf }: Props) {
                 <span className={`pill pill-${pri.tone}`}>{pri.label}</span>
               </div>
               <div className="consult-meta">
+                <span className="pill pill-muted">{c.specialty}</span>
                 <span>
                   <IconClock size={13} /> {wait} min waiting
                 </span>

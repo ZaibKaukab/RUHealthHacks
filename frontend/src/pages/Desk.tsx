@@ -34,6 +34,9 @@ export default function Desk() {
   const urgent = dashboard.consultations.filter(
     (c) => c.priority === "urgent" || c.priority === "stroke",
   ).length;
+  const synapseLive = dashboard.consultations.filter(
+    (c) => c.status === "in_progress" || c.status === "waiting",
+  ).length;
 
   const gapMins = topRisk?.start_at
     ? Math.max(1, Math.min(90, minutesUntil(String(topRisk.start_at), dashboard.as_of)))
@@ -56,28 +59,45 @@ export default function Desk() {
         </motion.div>
       ) : (
         <section className="insight insight-solo" aria-labelledby="insight-title">
-          <p className="insight-kicker">NEEDS ATTENTION</p>
-          <h1 id="insight-title">
-            {topRisk && gapMins != null
-              ? `Coverage gap in ${gapMins} min at ${hospitalName(topRisk.hospital_id, dashboard.hospitals)}`
-              : "Network stable for the next 90 minutes"}
-          </h1>
-          <p>{topRisk?.reason ?? "No ranked coverage risks in the forecast horizon."}</p>
+          <div className="insight-copy">
+            <p className="insight-kicker">NEEDS ATTENTION</p>
+            <h1 id="insight-title">
+              {topRisk && gapMins != null
+                ? `Coverage gap in ${gapMins} min at ${hospitalName(topRisk.hospital_id, dashboard.hospitals)}`
+                : "Network stable for the next 90 minutes"}
+            </h1>
+            <p>{topRisk?.reason ?? "No ranked coverage risks in the forecast horizon."}</p>
+            <p className="insight-next">
+              Next: review eligibility, then approve a split-shift offer.
+            </p>
+            <span className="neuro-badge">Tele-neurology · stroke-priority</span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => openDecide()}
+          >
+            Review intervention
+          </button>
         </section>
       )}
 
       <div className="stat-strip" aria-label="Live stats">
         <div className="stat-tile">
           <div className="n tabular">{onCall}</div>
-          <div className="l">Providers on call</div>
+          <div className="l">Neurologists on call</div>
         </div>
         <div className="stat-tile">
           <div className="n tabular">{waiting}</div>
           <div className="l">Consults waiting</div>
         </div>
-        <div className="stat-tile">
+        <div className="stat-tile stat-tile-accent">
           <div className="n tabular">{urgent}</div>
           <div className="l">Stroke-priority</div>
+        </div>
+        <div className="stat-tile">
+          <div className="n tabular">{synapseLive}</div>
+          <div className="l">Synapse pathways</div>
         </div>
       </div>
 
@@ -85,7 +105,7 @@ export default function Desk() {
         <div className="panel-head">
           <div>
             <h2>Next 90 minutes</h2>
-            <p>Credentialed capacity vs consult demand · 15-minute slots</p>
+            <p>Credentialed neurology capacity vs consult demand · 15-minute slots</p>
           </div>
         </div>
         <CoverageHorizon forecast={dashboard.forecast} />
@@ -148,7 +168,7 @@ export default function Desk() {
           <div className="panel-head">
             <div>
               <h2>Physicians</h2>
-              <p>Shift state · signal conflicts · offer readiness</p>
+              <p>Neurology specialty · shift state · Synapse readiness</p>
             </div>
           </div>
           {dashboard.physicians.slice(0, 6).map((p) => (
@@ -156,6 +176,9 @@ export default function Desk() {
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <strong>{p.name}</strong>
                 <span className="pill pill-muted">{p.availability.status}</span>
+              </div>
+              <div className="rail-specialty">
+                {(p.specialties ?? ["neurology"]).join(", ")}
               </div>
               <div className="rail-meta">
                 {p.availability.on_shift ? "On shift" : "Off shift"}
