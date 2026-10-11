@@ -3,17 +3,21 @@ import { motion, useReducedMotion } from "framer-motion";
 
 /** Neurology hero stage: neural mesh + waveform + floating ops modules. */
 export function NeuroHero() {
+  const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduce = useReducedMotion();
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const wrap = wrapRef.current;
+    if (!canvas || !wrap) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     let raf = 0;
     let t = 0;
+    let w = 0;
+    let h = 0;
 
     type Branch = { x: number; y: number; a: number; len: number; w: number; hue: number };
     const branches: Branch[] = [];
@@ -28,13 +32,19 @@ export function NeuroHero() {
       });
     }
 
+    const measure = () => {
+      const rect = wrap.getBoundingClientRect();
+      w = Math.max(1, Math.floor(rect.width));
+      h = Math.max(1, Math.floor(rect.height));
+    };
+
     const drawBranch = (
       x: number,
       y: number,
       a: number,
       len: number,
       depth: number,
-      w: number,
+      lw: number,
       phase: number,
     ) => {
       if (depth <= 0 || len < 0.012) return;
@@ -42,15 +52,15 @@ export function NeuroHero() {
       const x2 = x + Math.cos(a) * len;
       const y2 = y + Math.sin(a) * len * 0.85;
       ctx.strokeStyle = `rgba(45, 212, 168, ${0.15 + pulse * 0.35})`;
-      ctx.lineWidth = w;
+      ctx.lineWidth = lw;
       ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(x * canvas.clientWidth, y * canvas.clientHeight);
-      ctx.lineTo(x2 * canvas.clientWidth, y2 * canvas.clientHeight);
+      ctx.moveTo(x * w, y * h);
+      ctx.lineTo(x2 * w, y2 * h);
       ctx.stroke();
 
-      const tipX = x2 * canvas.clientWidth;
-      const tipY = y2 * canvas.clientHeight;
+      const tipX = x2 * w;
+      const tipY = y2 * h;
       const g = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, 10);
       g.addColorStop(0, `rgba(110, 231, 197, ${0.35 + pulse * 0.4})`);
       g.addColorStop(1, "transparent");
@@ -59,11 +69,11 @@ export function NeuroHero() {
       ctx.arc(tipX, tipY, 8, 0, Math.PI * 2);
       ctx.fill();
 
-      drawBranch(x2, y2, a - 0.45, len * 0.62, depth - 1, w * 0.7, phase + 0.4);
-      drawBranch(x2, y2, a + 0.5, len * 0.58, depth - 1, w * 0.7, phase + 0.8);
+      drawBranch(x2, y2, a - 0.45, len * 0.62, depth - 1, lw * 0.7, phase + 0.4);
+      drawBranch(x2, y2, a + 0.5, len * 0.58, depth - 1, lw * 0.7, phase + 0.8);
     };
 
-    const drawWave = (w: number, h: number) => {
+    const drawWave = () => {
       ctx.beginPath();
       const mid = h * 0.72;
       for (let x = 0; x <= w; x += 3) {
@@ -82,7 +92,6 @@ export function NeuroHero() {
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      // faint grid
       ctx.strokeStyle = "rgba(255,255,255,0.04)";
       ctx.lineWidth = 1;
       for (let i = 0; i < 8; i++) {
@@ -95,13 +104,8 @@ export function NeuroHero() {
     };
 
     const draw = () => {
+      measure();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = canvas.clientWidth;
-      const h = canvas.clientHeight;
-      if (w < 2 || h < 2) {
-        raf = requestAnimationFrame(draw);
-        return;
-      }
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -117,7 +121,6 @@ export function NeuroHero() {
       ctx.fillStyle = glow;
       ctx.fillRect(0, 0, w, h);
 
-      // wireframe cage hint (Neuro. inspo)
       ctx.strokeStyle = "rgba(255,255,255,0.08)";
       ctx.lineWidth = 1;
       const cx = w * 0.58;
@@ -136,9 +139,8 @@ export function NeuroHero() {
         drawBranch(b.x, b.y, b.a + sway, b.len, 3, b.w, b.hue);
       }
 
-      drawWave(w, h);
+      drawWave();
 
-      // floating orbs
       for (let i = 0; i < 6; i++) {
         const ox = w * (0.4 + 0.08 * i) + Math.sin(t * 0.001 + i) * 6;
         const oy = h * (0.28 + (i % 3) * 0.1) + Math.cos(t * 0.0012 + i) * 5;
@@ -162,14 +164,18 @@ export function NeuroHero() {
       }
     };
 
+    measure();
     draw();
-    const onResize = () => {
+
+    const ro = new ResizeObserver(() => {
+      measure();
       if (reduce) draw();
-    };
-    window.addEventListener("resize", onResize);
+    });
+    ro.observe(wrap);
+
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener("resize", onResize);
+      ro.disconnect();
     };
   }, [reduce]);
 
@@ -182,7 +188,7 @@ export function NeuroHero() {
         };
 
   return (
-    <div className="neuro-hero" aria-hidden>
+    <div className="neuro-hero" ref={wrapRef} aria-hidden>
       <canvas ref={canvasRef} className="neuro-hero-canvas" />
       <div className="neuro-hero-labels">
         <span>Astrocytes</span>

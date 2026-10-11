@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { brand, FAQ, PARTNER_LOGOS } from "../brand";
 import { RelayMark } from "../components/RelayMark";
 import { GetStarted } from "../components/GetStarted";
 import { HeroStage } from "../components/HeroStage";
-import { IconDesk } from "../components/Icons";
 
 function CycleWords() {
   const reduce = useReducedMotion();
@@ -118,15 +117,55 @@ function EventPartners() {
 
   return (
     <section className="event-partners" aria-label={brand.partnersHeader}>
-      <h2 className="partner-heading">{brand.partnersHeader}</h2>
+      <h2 className="partner-heading">
+        <span className="partner-heading-pill">{brand.partnersHeader}</span>
+      </h2>
       <div className="partner-marquee-wrap">
         <div className={`partner-marquee${reduce ? " paused" : ""}`}>
           {marks.map((m, idx) => (
-            <img key={`${m.alt}-${idx}`} src={m.src} alt="" />
+            <div className="partner-slot" key={`${m.alt}-${idx}`}>
+              <img src={m.src} alt="" />
+            </div>
           ))}
         </div>
       </div>
     </section>
+  );
+}
+
+function FooterContact() {
+  const [email, setEmail] = useState("");
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const trimmed = email.trim();
+    if (!trimmed) return;
+    const subject = encodeURIComponent("Relay demo contact");
+    const body = encodeURIComponent(`From: ${trimmed}\n\nI'd like to learn more about Relay.`);
+    window.location.href = `mailto:${brand.reachOutEmail}?subject=${subject}&body=${body}`;
+  };
+
+  return (
+    <form className="footer-contact" onSubmit={onSubmit}>
+      <label className="sr-only" htmlFor="footer-email">
+        Email
+      </label>
+      <div className="footer-contact-row">
+        <input
+          id="footer-email"
+          type="email"
+          required
+          placeholder="you@email.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+        />
+        <button type="submit" className="footer-contact-go" aria-label="Send contact">
+          →
+        </button>
+      </div>
+      <p className="footer-contact-note">Demo contact. No spam.</p>
+    </form>
   );
 }
 
@@ -167,7 +206,6 @@ export default function Landing() {
             </motion.p>
             <motion.div className="cta-row" {...rise(0.32)}>
               <Link to="/app" className="btn btn-primary btn-cta-desk btn-cta-lg">
-                <IconDesk size={20} />
                 {brand.ctaPrimary}
               </Link>
             </motion.div>
@@ -186,6 +224,7 @@ export default function Landing() {
           <RelayMark size="sm" href={null} />
           <p>{brand.disclaimer}</p>
         </div>
+        <FooterContact />
       </footer>
     </div>
   );

@@ -10,7 +10,9 @@ export const brand = {
   disclaimer:
     "Synthetic demo data. No patient information. Human approval before every offer.",
   heroVideo: "/hero/relay-hero.mp4",
-  ctaPrimary: "Enter desk",
+  /** Flip to "classic" to restore NeuralScene without git history */
+  heroVisual: "neuro",
+  ctaPrimary: "Open coverage desk",
   getStarted: "Get started",
   deskLabel: "Coverage desk",
   labLabel: "Scenario lab",
@@ -43,11 +45,10 @@ export const FAQ = [
   },
 ] as const;
 
-/** Order: Rutgers Health, Sevaro, AWS, Microsoft, Cigna */
+/** Order: Rutgers Health, Sevaro, AWS, Microsoft */
 export const PARTNER_LOGOS = [
   { src: "/brand/rutgers-health-hack-dark.svg", alt: "Rutgers Health Hack" },
   { src: "/brand/sevaro.svg", alt: "Sevaro" },
   { src: "/brand/partners/aws.png", alt: "AWS" },
   { src: "/brand/partners/microsoft.png", alt: "Microsoft" },
-  { src: "/brand/partners/cigna.png", alt: "The Cigna Group" },
 ] as const;
